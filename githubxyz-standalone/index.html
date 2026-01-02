@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Repository Analyzer - Auto Architecture Analysis</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .container {
+            text-align: center;
+            max-width: 800px;
+            padding: 40px;
+        }
+
+        /* Black Hole Loader */
+        .black-hole {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            margin: 0 auto 40px;
+        }
+
+        .black-hole-core {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80px;
+            height: 80px;
+            background: radial-gradient(circle, #000 0%, #1a1a2e 70%, transparent 100%);
+            border-radius: 50%;
+            box-shadow: 0 0 40px rgba(138, 43, 226, 0.8),
+                        0 0 80px rgba(138, 43, 226, 0.6),
+                        inset 0 0 40px rgba(0, 0, 0, 0.9);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.1); }
+        }
+
+        .orbit {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            border: 2px solid rgba(138, 43, 226, 0.3);
+            border-radius: 50%;
+            animation: rotate 3s linear infinite;
+        }
+
+        .orbit:nth-child(1) {
+            width: 120px;
+            height: 120px;
+            margin-left: -60px;
+            margin-top: -60px;
+            animation-duration: 2s;
+        }
+
+        .orbit:nth-child(2) {
+            width: 160px;
+            height: 160px;
+            margin-left: -80px;
+            margin-top: -80px;
+            animation-duration: 3s;
+        }
+
+        .orbit:nth-child(3) {
+            width: 200px;
+            height: 200px;
+            margin-left: -100px;
+            margin-top: -100px;
+            animation-duration: 4s;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: #8a2be2;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #8a2be2;
+        }
+
+        /* Progress */
+        .progress-container {
+            margin: 40px 0;
+        }
+
+        .progress-text {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #8a2be2;
+            animation: glow 2s ease-in-out infinite;
+        }
+
+        @keyframes glow {
+            0%, 100% { text-shadow: 0 0 10px rgba(138, 43, 226, 0.5); }
+            50% { text-shadow: 0 0 20px rgba(138, 43, 226, 0.8); }
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #8a2be2, #4a90e2);
+            border-radius: 3px;
+            transition: width 0.5s ease;
+            box-shadow: 0 0 10px rgba(138, 43, 226, 0.8);
+        }
+
+        .repo-info {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(138, 43, 226, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 30px 0;
+        }
+
+        .repo-name {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #8a2be2, #4a90e2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .repo-url {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.6);
+            word-break: break-all;
+        }
+
+        .status-message {
+            font-size: 16px;
+            color: rgba(255, 255, 255, 0.8);
+            margin: 10px 0;
+            min-height: 24px;
+        }
+
+        .error-container {
+            background: rgba(220, 38, 38, 0.1);
+            border: 1px solid rgba(220, 38, 38, 0.3);
+            border-radius: 12px;
+            padding: 30px;
+            margin: 20px 0;
+        }
+
+        .error-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #ef4444;
+            margin-bottom: 10px;
+        }
+
+        .error-message {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 16px;
+            line-height: 1.6;
+        }
+
+        .retry-button {
+            margin-top: 20px;
+            padding: 12px 32px;
+            background: linear-gradient(135deg, #8a2be2, #4a90e2);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .retry-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(138, 43, 226, 0.4);
+        }
+
+        .success-container {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            border-radius: 12px;
+            padding: 30px;
+            margin: 20px 0;
+        }
+
+        .success-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+
+        .success-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #22c55e;
+            margin-bottom: 10px;
+        }
+
+        .download-info {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 16px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="loading-view">
+            <!-- Black Hole Loader -->
+            <div class="black-hole">
+                <div class="orbit"></div>
+                <div class="orbit"></div>
+                <div class="orbit"></div>
+                <div class="black-hole-core"></div>
+            </div>
+
+            <!-- Progress -->
+            <div class="progress-container">
+                <div class="progress-text" id="progress-text">Initializing...</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+                </div>
+                <div class="status-message" id="status-message"></div>
+            </div>
+
+            <!-- Repository Info -->
+            <div class="repo-info" id="repo-info" style="display: none;">
+                <div class="repo-name" id="repo-name"></div>
+                <div class="repo-url" id="repo-url"></div>
+            </div>
+        </div>
+
+        <!-- Error View -->
+        <div id="error-view" style="display: none;">
+            <div class="error-container">
+                <div class="error-title">❌ Analysis Failed</div>
+                <div class="error-message" id="error-message"></div>
+                <button class="retry-button" onclick="location.reload()">Try Again</button>
+            </div>
+        </div>
+
+        <!-- Success View -->
+        <div id="success-view" style="display: none;">
+            <div class="success-container">
+                <div class="success-icon">✅</div>
+                <div class="success-title">Analysis Complete!</div>
+                <div class="download-info">Your architecture documentation is downloading...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Parse GitHub URL from current path
+        function parseGitHubUrl() {
+            const path = window.location.pathname;
+            // Remove leading slash
+            const cleanPath = path.replace(/^\//, '');
+            
+            if (!cleanPath) {
+                return null;
+            }
+
+            // Convert githubxyz.com/owner/repo to github.com/owner/repo
+            return `https://github.com/${cleanPath}`;
+        }
+
+        // Update progress
+        function updateProgress(percent, text, status = '') {
+            document.getElementById('progress-fill').style.width = `${percent}%`;
+            document.getElementById('progress-text').textContent = text;
+            document.getElementById('status-message').textContent = status;
+        }
+
+        // Show error
+        function showError(message) {
+            document.getElementById('loading-view').style.display = 'none';
+            document.getElementById('error-view').style.display = 'block';
+            document.getElementById('error-message').textContent = message;
+        }
+
+        // Show success and download
+        function showSuccess(downloadId) {
+            document.getElementById('loading-view').style.display = 'none';
+            document.getElementById('success-view').style.display = 'block';
+
+            // Auto-download after 1 second
+            setTimeout(() => {
+                window.location.href = `http://localhost:8002/api/download/${downloadId}`;
+            }, 1000);
+        }
+
+        // Analyze repository
+        async function analyzeRepository(githubUrl) {
+            try {
+                // Show repo info
+                const repoInfo = document.getElementById('repo-info');
+                const repoName = githubUrl.replace('https://github.com/', '');
+                document.getElementById('repo-name').textContent = repoName;
+                document.getElementById('repo-url').textContent = githubUrl;
+                repoInfo.style.display = 'block';
+
+                updateProgress(10, '🔍 Validating repository...', 'Checking if repository is accessible');
+                await sleep(500);
+
+                updateProgress(20, '📥 Cloning repository...', 'Downloading repository files');
+                
+                // Call backend
+                const response = await fetch('http://localhost:8002/api/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ github_url: githubUrl }),
+                });
+
+                updateProgress(40, '📊 Analyzing code structure...', 'Examining files and dependencies');
+                await sleep(1000);
+
+                updateProgress(60, '🔐 Checking security vulnerabilities...', 'Scanning for potential issues');
+                await sleep(1000);
+
+                updateProgress(80, '🤖 Generating architecture documentation...', 'AI is creating comprehensive analysis');
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ detail: 'Analysis failed' }));
+                    throw new Error(errorData.detail || 'Failed to analyze repository');
+                }
+
+                const data = await response.json();
+
+                updateProgress(100, '✅ Analysis complete!', 'Documentation generated successfully');
+                await sleep(500);
+
+                // Show success and trigger download
+                showSuccess(data.download_id);
+
+            } catch (error) {
+                console.error('Analysis error:', error);
+                showError(error.message || 'An unexpected error occurred. Please try again.');
+            }
+        }
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        // Initialize on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            const githubUrl = parseGitHubUrl();
+
+            if (!githubUrl) {
+                showError('No GitHub repository specified in URL. Please use format: githubxyz.com/owner/repo');
+                return;
+            }
+
+            // Start analysis
+            analyzeRepository(githubUrl);
+        });
+
+        // Add floating particles
+        function createParticles() {
+            const blackHole = document.querySelector('.black-hole');
+            for (let i = 0; i < 20; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = `${Math.random() * 100}%`;
+                particle.style.top = `${Math.random() * 100}%`;
+                particle.style.animation = `float ${2 + Math.random() * 3}s ease-in-out infinite`;
+                particle.style.animationDelay = `${Math.random() * 2}s`;
+                blackHole.appendChild(particle);
+            }
+        }
+
+        // Add float animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes float {
+                0%, 100% { transform: translate(0, 0) scale(1); opacity: 0; }
+                10% { opacity: 1; }
+                90% { opacity: 1; }
+                100% { transform: translate(${Math.random() * 100 - 50}px, ${Math.random() * 100 - 50}px) scale(0); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+        createParticles();
+    </script>
+</body>
+</html>

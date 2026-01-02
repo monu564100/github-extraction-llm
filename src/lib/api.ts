@@ -1,10 +1,16 @@
 import { CategoryType } from "@/components/Sidebar";
 
+// Data backend URL (Excel cache layer) - should be called first
+const DATA_BACKEND_URL = import.meta.env.VITE_DATA_API_URL || "http://localhost:8001/api/data";
+// Main backend URL (Gemini API) - fallback
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
 
 interface ChatResponse {
   content: string;
   cached: boolean;
+  source?: string;
+  similarity_score?: number;
+  entry_id?: string;
   metadata?: Record<string, unknown>;
 }
 
@@ -47,22 +53,29 @@ const categoryEndpoints: Record<CategoryType, string> = {
   database: "/chat/database",
   api: "/chat/api",
   prompts: "/chat/prompts",
+  github: "/chat/github",
+  recents: "/chat/recents",
 };
 
 class APIService {
   private baseUrl: string;
+  private dataBackendUrl: string;
   private abortController: AbortController | null = null;
   private timeout: number = 300000; // 5 minutes timeout for long responses
 
-  constructor(baseUrl: string = API_BASE_URL) {
+  constructor(baseUrl: string = API_BASE_URL, dataBackendUrl: string = DATA_BACKEND_URL) {
     this.baseUrl = baseUrl;
+    this.dataBackendUrl = dataBackendUrl;
   }
 
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
+    useDataBackend: boolean = false
   ): Promise<T> {
     this.abortController = new AbortController();
+    
+    const url = useDataBackend ? this.dataBackendUrl : this.baseUrl;
     
     // Set timeout
     const timeoutId = setTimeout(() => {
@@ -70,7 +83,7 @@ class APIService {
     }, this.timeout);
 
     try {
-      const response = await fetch(`${this.baseUrl}${endpoint}`, {
+      const response = await fetch(`${url}${endpoint}`, {
         ...options,
         signal: this.abortController.signal,
         headers: {
@@ -105,22 +118,48 @@ class APIService {
     prompt: string,
     context?: string
   ): Promise<string> {
-    const endpoint = categoryEndpoints[category];
-
-    if (category === "ui") {
-      const response = await this.request<UIResearchResponse>(endpoint, {
+    // Route ALL requests through data backend (Excel cache layer)
+    // Data backend will check cache first, then call main backend if needed
+    try {
+      console.log(`📤 Sending request to Data Backend for category: ${category}`);
+      
+      const response = await this.request<ChatResponse>("/chat", {
         method: "POST",
-        body: JSON.stringify({ prompt, industry: context }),
-      });
-      return this.formatUIResponse(response);
+        body: JSON.stringify({ 
+          prompt, 
+          category,
+          context,
+          similarity_threshold: 0.80 
+        }),
+      }, true); // true = use data backend
+      
+      console.log(`📥 Response received - Source: ${response.source}, Cached: ${response.cached}`);
+      if (response.similarity_score) {
+        console.log(`   Similarity Score: ${(response.similarity_score * 100).toFixed(1)}%`);
+      }
+      
+      return response.content;
+    } catch (error) {
+      console.warn("⚠️ Data backend unavailable, falling back to main backend", error);
+      
+      // Fallback to main backend directly
+      const endpoint = categoryEndpoints[category];
+
+      if (category === "ui") {
+        const response = await this.request<UIResearchResponse>(endpoint, {
+          method: "POST",
+          body: JSON.stringify({ prompt, industry: context }),
+        }, false);
+        return this.formatUIResponse(response);
+      }
+
+      const response = await this.request<ChatResponse>(endpoint, {
+        method: "POST",
+        body: JSON.stringify({ prompt, context }),
+      }, false);
+
+      return response.content;
     }
-
-    const response = await this.request<ChatResponse>(endpoint, {
-      method: "POST",
-      body: JSON.stringify({ prompt, context }),
-    });
-
-    return response.content;
   }
 
   private formatUIResponse(response: UIResearchResponse): string {
@@ -185,6 +224,18 @@ class APIService {
   }
 
   async healthCheck(): Promise<boolean> {
+    try {
+      // Check data backend first
+      const dataResponse = await fetch(`${this.dataBackendUrl.replace("/api/data", "")}/health`);
+      if (dataResponse.ok) {
+        console.log("✅ Data backend (Excel cache) is healthy");
+        return true;
+      }
+    } catch {
+      console.warn("⚠️ Data backend not available");
+    }
+    
+    // Fallback to main backend check
     try {
       const response = await fetch(`${this.baseUrl.replace("/api/v1", "")}/health`);
       return response.ok;

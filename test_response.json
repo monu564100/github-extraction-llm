@@ -1,0 +1,4 @@
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100   291  100   235  100    56    936    223 --:--:-- --:--:-- --:--:--  1159
+{"detail":"Failed to analyze repository: [WinError 5] Access is denied: 'C:\\\\Users\\\\monu5\\\\AppData\\\\Local\\\\Temp\\\\git_analyzer\\\\Hello-World\\\\.git\\\\objects\\\\pack\\\\pack-22687ef73ca8dc8a43effda95f5ba16b3959bd82.idx'"}
